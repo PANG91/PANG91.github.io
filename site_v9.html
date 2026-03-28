@@ -1,0 +1,2093 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>Ollama PT AGC</title>
+  <style>
+    :root {
+      --bg: #f3efe6;
+      --text: #1f2937;
+      --muted: #5f6b7b;
+      --heading: #0f172a;
+      --link: #8c6512;
+      --code-bg: #111827;
+      --code-text: #e5edf8;
+      --quote-border: #d38b63;
+      --quote-bg: rgba(211, 139, 99, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      background: linear-gradient(180deg, #faf7f1 0%, #f2ece0 100%);
+      -webkit-touch-callout: none;
+    }
+
+
+    .page {
+      position: relative;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 48px 20px 80px;
+    }
+
+    .hero {
+      margin-bottom: 8px;
+    }
+
+    .hero h1 {
+      margin: 0 0 18px;
+      color: var(--heading);
+      font-size: clamp(2.6rem, 4vw, 4.8rem);
+      line-height: 0.98;
+      letter-spacing: -0.05em;
+    }
+
+    .panel {
+      background: transparent;
+    }
+
+    .panel::before {
+      display: none;
+    }
+
+    .content {
+      padding: 8px 0 0;
+    }
+
+    .markdown-body {
+      font-size: 1.02rem;
+      line-height: 1.76;
+    }
+
+    .markdown-body > :first-child {
+      margin-top: 0;
+    }
+
+    .markdown-body h1,
+    .markdown-body h2,
+    .markdown-body h3,
+    .markdown-body h4,
+    .markdown-body h5,
+    .markdown-body h6 {
+      margin-top: 1.8em;
+      margin-bottom: 0.7em;
+      color: var(--heading);
+      line-height: 1.18;
+      letter-spacing: -0.02em;
+    }
+
+    .markdown-body h1 {
+      font-size: clamp(2rem, 4vw, 3.4rem);
+    }
+
+    .markdown-body h2 {
+      font-size: clamp(1.5rem, 3vw, 2.2rem);
+      padding-bottom: 0.22em;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    }
+
+    .markdown-body h3 {
+      font-size: 1.35rem;
+    }
+
+    .markdown-body h4 {
+      font-size: 1.12rem;
+      color: #6d4e09;
+    }
+
+    .markdown-body p,
+    .markdown-body ul,
+    .markdown-body blockquote,
+    .markdown-body pre {
+      margin: 1rem 0;
+    }
+
+    .markdown-body .developer-credit {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.18rem;
+      margin: 0.2rem 0 0.6rem;
+      color: var(--heading);
+      font-size: 1.08rem;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .secret-trigger {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      color: inherit;
+      cursor: pointer;
+    }
+
+    .secret-label {
+      display: inline-block;
+      color: inherit;
+    }
+
+    .secret-popover {
+      position: absolute;
+      top: 50%;
+      left: calc(100% + 0.82rem);
+      transform: translate3d(0.26rem, -50%, 0) scale(0.84, 0.92);
+      transform-origin: left center;
+      display: inline-flex;
+      align-items: center;
+      width: max-content;
+      max-width: min(calc(100vw - 3rem), 20em);
+      min-height: 1.16em;
+      padding: 0.08em 0.52em;
+      border: 1px solid rgba(255, 255, 255, 0.34);
+      border-radius: 999px;
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.34), rgba(255, 247, 224, 0.14));
+      -webkit-backdrop-filter: blur(20px) saturate(160%);
+      backdrop-filter: blur(20px) saturate(160%);
+      box-shadow:
+        0 18px 38px rgba(118, 89, 29, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.36);
+      color: rgba(31, 41, 55, 0.82);
+      font-size: 0.82em;
+      font-weight: 600;
+      line-height: 1.15;
+      letter-spacing: 0;
+      white-space: nowrap;
+      opacity: 0;
+      filter: blur(10px);
+      pointer-events: none;
+      will-change: transform, opacity, filter;
+      transition:
+        opacity 360ms cubic-bezier(0.22, 1, 0.36, 1),
+        transform 660ms cubic-bezier(0.16, 0.92, 0.22, 1.18),
+        filter 520ms cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 520ms cubic-bezier(0.22, 1, 0.36, 1);
+      z-index: 10;
+    }
+
+    .secret-trigger.is-open .secret-popover {
+      opacity: 1;
+      transform: translate3d(0, -50%, 0) scale(1);
+      filter: blur(0);
+      pointer-events: auto;
+      box-shadow:
+        0 22px 44px rgba(118, 89, 29, 0.14),
+        inset 0 1px 0 rgba(255, 255, 255, 0.42);
+    }
+
+    .hero .secret-trigger[data-secret-key="agc"] .secret-popover {
+      top: calc(100% + 0.62rem);
+      left: 50%;
+      transform: translate3d(-50%, -0.46rem, 0) scale(0.76, 0.86);
+      transform-origin: center top;
+      max-width: 8.4em;
+      min-height: 1.08em;
+      padding: 0.14em 0.48em;
+      font-size: clamp(0.76rem, 1vw, 0.98rem);
+      line-height: 1.08;
+    }
+
+    .hero .secret-trigger[data-secret-key="agc"].is-open .secret-popover {
+      transform: translate3d(-50%, 0, 0) scale(1);
+    }
+
+    
+    /* 关闭动画 - 缩回到trigger位置 */
+    
+    /* 水滴效果 */
+    @keyframes water-drop-float {
+      0% {
+        opacity: 1;
+        transform: translate(0, 0) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(var(--drop-x), var(--drop-y)) scale(0);
+      }
+    }
+    
+    .water-drop {
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      will-change: transform, opacity;
+      animation: water-drop-float 600ms ease-out forwards;
+    }
+    
+    /* 浅色模式 - 黑色水滴 */
+    .water-drop {
+      background: rgba(0, 0, 0, 0.7);
+    }
+    
+    /* 深色模式 - 白色水滴 */
+    @media (prefers-color-scheme: dark) {
+      .water-drop {
+        background: rgba(255, 255, 255, 0.8);
+      }
+    }
+
+    .hero .secret-trigger[data-secret-key="pt"] .secret-popover {
+      top: auto;
+      bottom: calc(100% + 0.62rem);
+      left: 50%;
+      transform: translate3d(-50%, 0.46rem, 0) scale(0.76, 0.86);
+      transform-origin: center bottom;
+      max-width: 7.2em;
+      min-height: 1.08em;
+      padding: 0.14em 0.48em;
+      font-size: clamp(0.76rem, 1vw, 0.98rem);
+      line-height: 1.08;
+    }
+
+    .hero .secret-trigger[data-secret-key="pt"].is-open .secret-popover {
+      transform: translate3d(-50%, 0, 0) scale(1);
+    }
+
+    .secret-popover-gallery {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      position: relative;
+      width: max-content;
+      white-space: normal;
+      --avatar-size: 2.18rem;
+      --link-origin-shift: 0px;
+      --link-shell-left: 50%;
+    }
+
+    .profile-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.34rem;
+      width: max-content;
+    }
+
+    .profile-card {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+      pointer-events: auto;
+    }
+
+    .profile-avatar {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: var(--avatar-size);
+      height: var(--avatar-size);
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: transparent;
+      cursor: pointer;
+      overflow: hidden;
+      transition: transform 480ms cubic-bezier(0.16, 0.92, 0.22, 1.18), filter 360ms ease;
+    }
+
+    .profile-avatar::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.4), rgba(239, 223, 188, 0.18));
+      opacity: 0.92;
+      transition: opacity 360ms cubic-bezier(0.22, 1, 0.36, 1), transform 420ms cubic-bezier(0.18, 0.9, 0.24, 1.18);
+    }
+
+    .profile-avatar:hover {
+      transform: translateY(-1px) scale(1.045);
+    }
+
+    .profile-avatar:active {
+      transform: scale(0.97);
+    }
+
+    .profile-card.is-link-open .profile-avatar {
+      transform: translateY(-1px) scale(1.08);
+    }
+
+    .profile-avatar__image {
+      position: relative;
+      z-index: 1;
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1px solid rgba(255, 255, 255, 0.46);
+      box-shadow:
+        0 8px 18px rgba(15, 23, 42, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.22);
+      background: rgba(255, 255, 255, 0.14);
+      opacity: 0;
+      filter: blur(12px);
+      transform: scale(0.82);
+      transition:
+        opacity 340ms cubic-bezier(0.22, 1, 0.36, 1),
+        transform 560ms cubic-bezier(0.18, 0.9, 0.24, 1.18),
+        filter 420ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .profile-card.is-loaded .profile-avatar::before {
+      opacity: 0.16;
+      transform: scale(0.96);
+    }
+
+    .profile-card.is-loaded .profile-avatar__image {
+      opacity: 1;
+      filter: blur(0);
+      transform: scale(1);
+    }
+
+    .profile-link-shell {
+      position: absolute;
+      top: calc(var(--avatar-size) + 0.44rem);
+      left: var(--link-shell-left, 50%);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: auto;
+      max-width: min(14.4rem, var(--link-shell-max-width, calc(100vw - 3.2rem)));
+      min-height: 1.86rem;
+      padding: 0.3rem 0.74rem;
+      border: 1px solid rgba(255, 255, 255, 0.32);
+      border-radius: 999px;
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.34), rgba(255, 247, 224, 0.14));
+      -webkit-backdrop-filter: blur(18px) saturate(155%);
+      backdrop-filter: blur(18px) saturate(155%);
+      box-shadow:
+        0 16px 34px rgba(118, 89, 29, 0.14),
+        inset 0 1px 0 rgba(255, 255, 255, 0.34);
+      color: rgba(31, 41, 55, 0.82);
+      font-size: 0.64rem;
+      font-weight: 600;
+      line-height: 1.1;
+      letter-spacing: 0;
+      text-decoration: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      opacity: 0;
+      filter: blur(10px);
+      transform: translate3d(calc(-50% + var(--link-origin-shift, 0px)), -0.28rem, 0) scale(0.18, 0.38);
+      transform-origin: center top;
+      pointer-events: none;
+      will-change: transform, opacity, filter;
+      transition:
+        opacity 320ms cubic-bezier(0.22, 1, 0.36, 1),
+        transform 620ms cubic-bezier(0.16, 0.92, 0.22, 1.18),
+        filter 420ms cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 420ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .profile-link-shell:hover {
+      color: rgba(15, 23, 42, 0.9);
+    }
+
+    .secret-popover-gallery.is-link-open .profile-link-shell {
+      opacity: 1;
+      filter: blur(0);
+      transform: translate3d(-50%, 0, 0) scale(1);
+      pointer-events: auto;
+    }
+
+    .secret-popover[hidden] {
+      display: none;
+    }
+
+    .markdown-body a {
+      color: var(--link);
+      text-decoration-thickness: 1px;
+      text-underline-offset: 0.14em;
+    }
+
+    .markdown-body a:hover {
+      color: #6d4e09;
+    }
+
+    .markdown-body .download-row {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin: 0.9rem 0 1.1rem;
+    }
+
+    .markdown-body .download-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: #8c6512;
+      text-decoration: none;
+      box-shadow: none;
+      transition: transform 180ms ease, color 180ms ease, opacity 180ms ease;
+    }
+
+    .markdown-body .download-button:hover {
+      color: #6d4e09;
+      background: transparent;
+      box-shadow: none;
+      transform: translateY(-1px) scale(1.05);
+    }
+
+    .markdown-body .download-button svg {
+      width: 1.2rem;
+      height: 1.2rem;
+      flex: 0 0 auto;
+    }
+
+    .markdown-body .code-block {
+      position: relative;
+      margin: 1rem 0;
+    }
+
+    .markdown-body .code-block pre {
+      margin: 0;
+      padding: 2.55rem 2.95rem 1rem 1.2rem;
+    }
+
+    .markdown-body .copy-button {
+      position: absolute;
+      top: 2.88rem;
+      left: auto;
+      right: 1rem;
+      bottom: auto;
+      z-index: 2;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 0.92rem;
+      height: 0.92rem;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.58);
+      box-shadow: none;
+      cursor: pointer;
+      transition: transform 180ms ease, color 180ms ease, opacity 180ms ease;
+    }
+
+    .markdown-body .copy-button:hover {
+      color: #f4dfaa;
+      transform: scale(1.06);
+    }
+
+    .markdown-body .copy-button.is-copied {
+      color: #e2bc67;
+    }
+
+    .markdown-body .copy-button svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      pointer-events: none;
+    }
+
+    .markdown-body ul {
+      padding-left: 1.35rem;
+    }
+
+    .markdown-body li + li {
+      margin-top: 0.48rem;
+    }
+
+    .markdown-body code {
+      padding: 0.14rem 0.36rem;
+      border-radius: 7px;
+      background: rgba(17, 24, 39, 0.07);
+      color: #8f2d1f;
+      font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+      font-size: 0.9em;
+    }
+
+    .markdown-body pre {
+      overflow-x: auto;
+      padding: 1rem 1.2rem;
+      border-radius: 18px;
+      background: var(--code-bg);
+      color: var(--code-text);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+
+    .markdown-body pre code {
+      padding: 0;
+      border-radius: 0;
+      background: transparent;
+      color: inherit;
+      font-size: 0.92rem;
+    }
+
+    .markdown-body blockquote {
+      padding: 0.9rem 1rem;
+      border-left: 4px solid var(--quote-border);
+      border-radius: 0 14px 14px 0;
+      background: var(--quote-bg);
+      color: #5f3b29;
+    }
+
+    .markdown-body blockquote p {
+      margin: 0;
+    }
+
+    .markdown-body img {
+      display: inline-block;
+      max-width: min(100%, 240px);
+      height: auto;
+    }
+
+    .markdown-body picture {
+      display: inline-block;
+      max-width: min(100%, 240px);
+    }
+
+    .markdown-body picture img {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-width: 100%;
+    }
+
+    .markdown-body [align="center"] {
+      text-align: center;
+    }
+
+    .markdown-body hr {
+      border: 0;
+      border-top: 1px solid rgba(15, 23, 42, 0.08);
+      margin: 2rem 0;
+    }
+
+    .noscript {
+      margin-top: 16px;
+      color: #8f2d1f;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #000000;
+        --text: #eef2f6;
+        --muted: #bcc5cf;
+        --heading: #ffffff;
+        --link: #c5cdd8;
+        --code-bg: #101010;
+        --code-text: #edf1f5;
+        --quote-border: rgba(255, 255, 255, 0.2);
+        --quote-bg: rgba(255, 255, 255, 0.06);
+      }
+
+      body {
+        background: #000000;
+      }
+
+      .markdown-body h2,
+      .markdown-body hr {
+        border-color: rgba(255, 255, 255, 0.12);
+      }
+
+      .markdown-body h4 {
+        color: #eef2f6;
+      }
+
+      .markdown-body a:hover,
+      .markdown-body .download-button,
+      .markdown-body .download-button:hover {
+        color: #eef2f6;
+      }
+
+      .markdown-body code {
+        background: rgba(255, 255, 255, 0.08);
+        color: #eef2f6;
+      }
+
+      .markdown-body blockquote {
+        color: #eef2f6;
+      }
+
+      .noscript {
+        color: #d7dfe7;
+      }
+
+      .secret-popover {
+        border-color: rgba(255, 255, 255, 0.2);
+        background:
+          linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.06));
+        box-shadow:
+          0 18px 38px rgba(0, 0, 0, 0.48),
+          inset 0 1px 0 rgba(255, 255, 255, 0.14);
+        color: rgba(244, 247, 250, 0.92);
+      }
+
+      .secret-trigger.is-open .secret-popover {
+        box-shadow:
+          0 22px 44px rgba(0, 0, 0, 0.56),
+          inset 0 1px 0 rgba(255, 255, 255, 0.18);
+      }
+
+      .profile-avatar__image {
+        border-color: rgba(255, 255, 255, 0.28);
+        box-shadow:
+          0 10px 20px rgba(0, 0, 0, 0.36),
+          inset 0 1px 0 rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .profile-avatar::before {
+        background:
+          linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08));
+      }
+
+      .profile-link-shell {
+        border-color: rgba(255, 255, 255, 0.2);
+        background:
+          linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.06));
+        box-shadow:
+          0 16px 34px rgba(0, 0, 0, 0.44),
+          inset 0 1px 0 rgba(255, 255, 255, 0.14);
+        color: rgba(244, 247, 250, 0.92);
+      }
+
+      .profile-link-shell:hover {
+        color: rgba(255, 255, 255, 0.98);
+      }
+
+      .markdown-body .copy-button:hover,
+      .markdown-body .copy-button.is-copied {
+        color: #eef2f6;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .page {
+        padding: 28px 14px 52px;
+      }
+
+      .content {
+        padding: 8px 0 0;
+      }
+
+      .hero h1 {
+        line-height: 1;
+      }
+
+      .markdown-body .developer-credit {
+        flex-wrap: nowrap;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="./entrance.css" />
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <h1><span class="secret-trigger" data-secret-key="pt0"><span class="secret-label">Ollama</span></span> <span class="secret-trigger" data-secret-key="pt"><span class="secret-label">PT</span><span class="secret-popover" hidden>庞疆博</span></span> <span class="secret-trigger" data-secret-key="agc"><span class="secret-label">AGC</span><span class="secret-popover" hidden>庞兔的代号</span></span></h1>
+      <noscript>
+        <p class="noscript">此页面需要 JavaScript 才能渲染内嵌的 Markdown 内容。</p>
+      </noscript>
+    </section>
+
+    <section class="panel">
+      <div class="content">
+        <article id="rendered" class="markdown-body"></article>
+      </div>
+    </section>
+  </main>
+
+  <script id="markdown-source" type="text/plain">
+<p align="center">
+  <a href="https://ollama.com">
+    <picture>
+      <source srcset="./Gemini_Generated_Image_b6dmgtb6dmgtb6dm.png" media="(prefers-color-scheme: dark)" />
+      <img src="./hello.png" alt="ollama" width="200" />
+    </picture>
+  </a>
+</p>
+
+# Ollama
+
+Start building with open models.
+
+## Download
+
+### macOS
+
+```shell
+curl -fsSL https://ollama.com/install.sh | sh
+```
+
+or [download manually](https://ollama.com/download/Ollama.dmg)
+
+### Windows
+
+```shell
+irm https://ollama.com/install.ps1 | iex
+```
+
+or [download manually](https://ollama.com/download/OllamaSetup.exe)
+
+### Linux
+
+```shell
+curl -fsSL https://ollama.com/install.sh | sh
+```
+
+[Manual install instructions](https://docs.ollama.com/linux#manual-install)
+
+### Docker
+
+The official [Ollama Docker image](https://hub.docker.com/r/ollama/ollama) `ollama/ollama` is available on Docker Hub.
+
+### Libraries
+
+- [ollama-python](https://github.com/ollama/ollama-python)
+- [ollama-js](https://github.com/ollama/ollama-js)
+
+### Community
+
+- [Discord](https://discord.gg/ollama)
+- [𝕏 (Twitter)](https://x.com/ollama)
+- [Reddit](https://reddit.com/r/ollama)
+
+## Get started
+
+```
+ollama
+```
+
+You'll be prompted to run a model or connect Ollama to your existing agents or applications such as `claude`, `codex`, `openclaw` and more.
+
+### Coding
+
+To launch a specific integration:
+
+```
+ollama launch claude
+```
+
+Supported integrations include [Claude Code](https://docs.ollama.com/integrations/claude-code), [Codex](https://docs.ollama.com/integrations/codex), [Droid](https://docs.ollama.com/integrations/droid), and [OpenCode](https://docs.ollama.com/integrations/opencode).
+
+### AI assistant
+
+Use [OpenClaw](https://docs.ollama.com/integrations/openclaw) to turn Ollama into a personal AI assistant across WhatsApp, Telegram, Slack, Discord, and more:
+
+```
+ollama launch openclaw
+```
+
+### Chat with a model
+
+Run and chat with [Gemma 3](https://ollama.com/library/gemma3):
+
+```
+ollama run gemma3
+```
+
+See [ollama.com/library](https://ollama.com/library) for the full list.
+
+See the [quickstart guide](https://docs.ollama.com/quickstart) for more details.
+
+## REST API
+
+Ollama has a REST API for running and managing models.
+
+```
+curl http://localhost:11434/api/chat -d '{
+  "model": "gemma3",
+  "messages": [{
+    "role": "user",
+    "content": "Why is the sky blue?"
+  }],
+  "stream": false
+}'
+```
+
+See the [API documentation](https://docs.ollama.com/api) for all endpoints.
+
+### Python
+
+```
+pip install ollama
+```
+
+```python
+from ollama import chat
+
+response = chat(model='gemma3', messages=[
+  {
+    'role': 'user',
+    'content': 'Why is the sky blue?',
+  },
+])
+print(response.message.content)
+```
+
+### JavaScript
+
+```
+npm i ollama
+```
+
+```javascript
+import ollama from "ollama";
+
+const response = await ollama.chat({
+  model: "gemma3",
+  messages: [{ role: "user", content: "Why is the sky blue?" }],
+});
+console.log(response.message.content);
+```
+
+## Supported backends
+
+- [llama.cpp](https://github.com/ggml-org/llama.cpp) project founded by Georgi Gerganov.
+
+## Documentation
+
+- [CLI reference](https://docs.ollama.com/cli)
+- [REST API reference](https://docs.ollama.com/api)
+- [Importing models](https://docs.ollama.com/import)
+- [Modelfile reference](https://docs.ollama.com/modelfile)
+- [Building from source](https://github.com/ollama/ollama/blob/main/docs/development.md)
+
+## Community Integrations
+
+> Want to add your project? Open a pull request.
+
+### Chat Interfaces
+
+#### Web
+
+- [Open WebUI](https://github.com/open-webui/open-webui) - Extensible, self-hosted AI interface
+- [Onyx](https://github.com/onyx-dot-app/onyx) - Connected AI workspace
+- [LibreChat](https://github.com/danny-avila/LibreChat) - Enhanced ChatGPT clone with multi-provider support
+- [Lobe Chat](https://github.com/lobehub/lobe-chat) - Modern chat framework with plugin ecosystem ([docs](https://lobehub.com/docs/self-hosting/examples/ollama))
+- [NextChat](https://github.com/ChatGPTNextWeb/ChatGPT-Next-Web) - Cross-platform ChatGPT UI ([docs](https://docs.nextchat.dev/models/ollama))
+- [Perplexica](https://github.com/ItzCrazyKns/Perplexica) - AI-powered search engine, open-source Perplexity alternative
+- [big-AGI](https://github.com/enricoros/big-AGI) - AI suite for professionals
+- [Lollms WebUI](https://github.com/ParisNeo/lollms-webui) - Multi-model web interface
+- [ChatOllama](https://github.com/sugarforever/chat-ollama) - Chatbot with knowledge bases
+- [Bionic GPT](https://github.com/bionic-gpt/bionic-gpt) - On-premise AI platform
+- [Chatbot UI](https://github.com/ivanfioravanti/chatbot-ollama) - ChatGPT-style web interface
+- [Hollama](https://github.com/fmaclen/hollama) - Minimal web interface
+- [Chatbox](https://github.com/Bin-Huang/Chatbox) - Desktop and web AI client
+- [chat](https://github.com/swuecho/chat) - Chat web app for teams
+- [Ollama RAG Chatbot](https://github.com/datvodinh/rag-chatbot.git) - Chat with multiple PDFs using RAG
+- [Tkinter-based client](https://github.com/chyok/ollama-gui) - Python desktop client
+
+#### Desktop
+
+- [Dify.AI](https://github.com/langgenius/dify) - LLM app development platform
+- [AnythingLLM](https://github.com/Mintplex-Labs/anything-llm) - All-in-one AI app for Mac, Windows, and Linux
+- [Maid](https://github.com/Mobile-Artificial-Intelligence/maid) - Cross-platform mobile and desktop client
+- [Witsy](https://github.com/nbonamy/witsy) - AI desktop app for Mac, Windows, and Linux
+- [Cherry Studio](https://github.com/kangfenmao/cherry-studio) - Multi-provider desktop client
+- [Ollama App](https://github.com/JHubi1/ollama-app) - Multi-platform client for desktop and mobile
+- [PyGPT](https://github.com/szczyglis-dev/py-gpt) - AI desktop assistant for Linux, Windows, and Mac
+- [Alpaca](https://github.com/Jeffser/Alpaca) - GTK4 client for Linux and macOS
+- [SwiftChat](https://github.com/aws-samples/swift-chat) - Cross-platform including iOS, Android, and Apple Vision Pro
+- [Enchanted](https://github.com/AugustDev/enchanted) - Native macOS and iOS client
+- [RWKV-Runner](https://github.com/josStorer/RWKV-Runner) - Multi-model desktop runner
+- [Ollama Grid Search](https://github.com/dezoito/ollama-grid-search) - Evaluate and compare models
+- [macai](https://github.com/Renset/macai) - macOS client for Ollama and ChatGPT
+- [AI Studio](https://github.com/MindWorkAI/AI-Studio) - Multi-provider desktop IDE
+- [Reins](https://github.com/ibrahimcetin/reins) - Parameter tuning and reasoning model support
+- [ConfiChat](https://github.com/1runeberg/confichat) - Privacy-focused with optional encryption
+- [LLocal.in](https://github.com/kartikm7/llocal) - Electron desktop client
+- [MindMac](https://mindmac.app) - AI chat client for Mac
+- [Msty](https://msty.app) - Multi-model desktop client
+- [BoltAI for Mac](https://boltai.com) - AI chat client for Mac
+- [IntelliBar](https://intellibar.app/) - AI-powered assistant for macOS
+- [Kerlig AI](https://www.kerlig.com/) - AI writing assistant for macOS
+- [Hillnote](https://hillnote.com) - Markdown-first AI workspace
+- [Perfect Memory AI](https://www.perfectmemory.ai/) - Productivity AI personalized by screen and meeting history
+
+#### Mobile
+
+- [Ollama Android Chat](https://github.com/sunshine0523/OllamaServer) - One-click Ollama on Android
+
+> SwiftChat, Enchanted, Maid, Ollama App, Reins, and ConfiChat listed above also support mobile platforms.
+
+### Code Editors & Development
+
+- [Cline](https://github.com/cline/cline) - VS Code extension for multi-file/whole-repo coding
+- [Continue](https://github.com/continuedev/continue) - Open-source AI code assistant for any IDE
+- [Void](https://github.com/voideditor/void) - Open source AI code editor, Cursor alternative
+- [Copilot for Obsidian](https://github.com/logancyang/obsidian-copilot) - AI assistant for Obsidian
+- [twinny](https://github.com/rjmacarthy/twinny) - Copilot and Copilot chat alternative
+- [gptel Emacs client](https://github.com/karthink/gptel) - LLM client for Emacs
+- [Ollama Copilot](https://github.com/bernardo-bruning/ollama-copilot) - Use Ollama as GitHub Copilot
+- [Obsidian Local GPT](https://github.com/pfrankov/obsidian-local-gpt) - Local AI for Obsidian
+- [Ellama Emacs client](https://github.com/s-kostyaev/ellama) - LLM tool for Emacs
+- [orbiton](https://github.com/xyproto/orbiton) - Config-free text editor with Ollama tab completion
+- [AI ST Completion](https://github.com/yaroslavyaroslav/OpenAI-sublime-text) - Sublime Text 4 AI assistant
+- [VT Code](https://github.com/vinhnx/vtcode) - Rust-based terminal coding agent with Tree-sitter
+- [QodeAssist](https://github.com/Palm1r/QodeAssist) - AI coding assistant for Qt Creator
+- [AI Toolkit for VS Code](https://aka.ms/ai-tooklit/ollama-docs) - Microsoft-official VS Code extension
+- [Open Interpreter](https://docs.openinterpreter.com/language-model-setup/local-models/ollama) - Natural language interface for computers
+
+### Libraries & SDKs
+
+- [LiteLLM](https://github.com/BerriAI/litellm) - Unified API for 100+ LLM providers
+- [Semantic Kernel](https://github.com/microsoft/semantic-kernel/tree/main/python/semantic_kernel/connectors/ai/ollama) - Microsoft AI orchestration SDK
+- [LangChain4j](https://github.com/langchain4j/langchain4j) - Java LangChain ([example](https://github.com/langchain4j/langchain4j-examples/tree/main/ollama-examples/src/main/java))
+- [LangChainGo](https://github.com/tmc/langchaingo/) - Go LangChain ([example](https://github.com/tmc/langchaingo/tree/main/examples/ollama-completion-example))
+- [Spring AI](https://github.com/spring-projects/spring-ai) - Spring framework AI support ([docs](https://docs.spring.io/spring-ai/reference/api/chat/ollama-chat.html))
+- [LangChain](https://python.langchain.com/docs/integrations/chat/ollama/) and [LangChain.js](https://js.langchain.com/docs/integrations/chat/ollama/) with [example](https://js.langchain.com/docs/tutorials/local_rag/)
+- [Ollama for Ruby](https://github.com/crmne/ruby_llm) - Ruby LLM library
+- [any-llm](https://github.com/mozilla-ai/any-llm) - Unified LLM interface by Mozilla
+- [OllamaSharp for .NET](https://github.com/awaescher/OllamaSharp) - .NET SDK
+- [LangChainRust](https://github.com/Abraxas-365/langchain-rust) - Rust LangChain ([example](https://github.com/Abraxas-365/langchain-rust/blob/main/examples/llm_ollama.rs))
+- [Agents-Flex for Java](https://github.com/agents-flex/agents-flex) - Java agent framework ([example](https://github.com/agents-flex/agents-flex/tree/main/agents-flex-llm/agents-flex-llm-ollama/src/test/java/com/agentsflex/llm/ollama))
+- [Elixir LangChain](https://github.com/brainlid/langchain) - Elixir LangChain
+- [Ollama-rs for Rust](https://github.com/pepperoni21/ollama-rs) - Rust SDK
+- [LangChain for .NET](https://github.com/tryAGI/LangChain) - .NET LangChain ([example](https://github.com/tryAGI/LangChain/blob/main/examples/LangChain.Samples.OpenAI/Program.cs))
+- [chromem-go](https://github.com/philippgille/chromem-go) - Go vector database with Ollama embeddings ([example](https://github.com/philippgille/chromem-go/tree/v0.5.0/examples/rag-wikipedia-ollama))
+- [LangChainDart](https://github.com/davidmigloz/langchain_dart) - Dart LangChain
+- [LlmTornado](https://github.com/lofcz/llmtornado) - Unified C# interface for multiple inference APIs
+- [Ollama4j for Java](https://github.com/ollama4j/ollama4j) - Java SDK
+- [Ollama for Laravel](https://github.com/cloudstudio/ollama-laravel) - Laravel integration
+- [Ollama for Swift](https://github.com/mattt/ollama-swift) - Swift SDK
+- [LlamaIndex](https://docs.llamaindex.ai/en/stable/examples/llm/ollama/) and [LlamaIndexTS](https://ts.llamaindex.ai/modules/llms/available_llms/ollama) - Data framework for LLM apps
+- [Haystack](https://github.com/deepset-ai/haystack-integrations/blob/main/integrations/ollama.md) - AI pipeline framework
+- [Firebase Genkit](https://firebase.google.com/docs/genkit/plugins/ollama) - Google AI framework
+- [Ollama-hpp for C++](https://github.com/jmont-dev/ollama-hpp) - C++ SDK
+- [PromptingTools.jl](https://github.com/svilupp/PromptingTools.jl) - Julia LLM toolkit ([example](https://svilupp.github.io/PromptingTools.jl/dev/examples/working_with_ollama))
+- [Ollama for R - rollama](https://github.com/JBGruber/rollama) - R SDK
+- [Portkey](https://portkey.ai/docs/welcome/integration-guides/ollama) - AI gateway
+- [Testcontainers](https://testcontainers.com/modules/ollama/) - Container-based testing
+- [LLPhant](https://github.com/theodo-group/LLPhant?tab=readme-ov-file#ollama) - PHP AI framework
+
+### Frameworks & Agents
+
+- [AutoGPT](https://github.com/Significant-Gravitas/AutoGPT/blob/master/docs/content/platform/ollama.md) - Autonomous AI agent platform
+- [crewAI](https://github.com/crewAIInc/crewAI) - Multi-agent orchestration framework
+- [Strands Agents](https://github.com/strands-agents/sdk-python) - Model-driven agent building by AWS
+- [Cheshire Cat](https://github.com/cheshire-cat-ai/core) - AI assistant framework
+- [any-agent](https://github.com/mozilla-ai/any-agent) - Unified agent framework interface by Mozilla
+- [Stakpak](https://github.com/stakpak/agent) - Open source DevOps agent
+- [Hexabot](https://github.com/hexastack/hexabot) - Conversational AI builder
+- [Neuro SAN](https://github.com/cognizant-ai-lab/neuro-san-studio) - Multi-agent orchestration ([docs](https://github.com/cognizant-ai-lab/neuro-san-studio/blob/main/docs/user_guide.md#ollama))
+
+### RAG & Knowledge Bases
+
+- [RAGFlow](https://github.com/infiniflow/ragflow) - RAG engine based on deep document understanding
+- [R2R](https://github.com/SciPhi-AI/R2R) - Open-source RAG engine
+- [MaxKB](https://github.com/1Panel-dev/MaxKB/) - Ready-to-use RAG chatbot
+- [Minima](https://github.com/dmayboroda/minima) - On-premises or fully local RAG
+- [Chipper](https://github.com/TilmanGriesel/chipper) - AI interface with Haystack RAG
+- [ARGO](https://github.com/xark-argo/argo) - RAG and deep research on Mac/Windows/Linux
+- [Archyve](https://github.com/nickthecook/archyve) - RAG-enabling document library
+- [Casibase](https://casibase.org) - AI knowledge base with RAG and SSO
+- [BrainSoup](https://www.nurgo-software.com/products/brainsoup) - Native client with RAG and multi-agent automation
+
+### Bots & Messaging
+
+- [LangBot](https://github.com/RockChinQ/LangBot) - Multi-platform messaging bots with agents and RAG
+- [AstrBot](https://github.com/Soulter/AstrBot/) - Multi-platform chatbot with RAG and plugins
+- [Discord-Ollama Chat Bot](https://github.com/kevinthedang/discord-ollama) - TypeScript Discord bot
+- [Ollama Telegram Bot](https://github.com/ruecat/ollama-telegram) - Telegram bot
+- [LLM Telegram Bot](https://github.com/innightwolfsleep/llm_telegram_bot) - Telegram bot for roleplay
+
+### Terminal & CLI
+
+- [aichat](https://github.com/sigoden/aichat) - All-in-one LLM CLI with Shell Assistant, RAG, and AI tools
+- [oterm](https://github.com/ggozad/oterm) - Terminal client for Ollama
+- [gollama](https://github.com/sammcj/gollama) - Go-based model manager for Ollama
+- [tlm](https://github.com/yusufcanb/tlm) - Local shell copilot
+- [tenere](https://github.com/pythops/tenere) - TUI for LLMs
+- [ParLlama](https://github.com/paulrobello/parllama) - TUI for Ollama
+- [llm-ollama](https://github.com/taketwo/llm-ollama) - Plugin for [Datasette's LLM CLI](https://llm.datasette.io/en/stable/)
+- [ShellOracle](https://github.com/djcopley/ShellOracle) - Shell command suggestions
+- [LLM-X](https://github.com/mrdjohnson/llm-x) - Progressive web app for LLMs
+- [cmdh](https://github.com/pgibler/cmdh) - Natural language to shell commands
+- [VT](https://github.com/vinhnx/vt.ai) - Minimal multimodal AI chat app
+
+### Productivity & Apps
+
+- [AppFlowy](https://github.com/AppFlowy-IO/AppFlowy) - AI collaborative workspace, self-hostable Notion alternative
+- [Screenpipe](https://github.com/mediar-ai/screenpipe) - 24/7 screen and mic recording with AI-powered search
+- [Vibe](https://github.com/thewh1teagle/vibe) - Transcribe and analyze meetings
+- [Page Assist](https://github.com/n4ze3m/page-assist) - Chrome extension for AI-powered browsing
+- [NativeMind](https://github.com/NativeMindBrowser/NativeMindExtension) - Private, on-device browser AI assistant
+- [Ollama Fortress](https://github.com/ParisNeo/ollama_proxy_server) - Security proxy for Ollama
+- [1Panel](https://github.com/1Panel-dev/1Panel/) - Web-based Linux server management
+- [Writeopia](https://github.com/Writeopia/Writeopia) - Text editor with Ollama integration
+- [QA-Pilot](https://github.com/reid41/QA-Pilot) - GitHub code repository understanding
+- [Raycast extension](https://github.com/MassimilianoPasquini97/raycast_ollama) - Ollama in Raycast
+- [Painting Droid](https://github.com/mateuszmigas/painting-droid) - Painting app with AI integrations
+- [Serene Pub](https://github.com/doolijb/serene-pub) - AI roleplaying app
+- [Mayan EDMS](https://gitlab.com/mayan-edms/mayan-edms) - Document management with Ollama workflows
+- [TagSpaces](https://www.tagspaces.org) - File management with [AI tagging](https://docs.tagspaces.org/ai/)
+
+### Observability & Monitoring
+
+- [Opik](https://www.comet.com/docs/opik/cookbook/ollama) - Debug, evaluate, and monitor LLM applications
+- [OpenLIT](https://github.com/openlit/openlit) - OpenTelemetry-native monitoring for Ollama and GPUs
+- [Lunary](https://lunary.ai/docs/integrations/ollama) - LLM observability with analytics and PII masking
+- [Langfuse](https://langfuse.com/docs/integrations/ollama) - Open source LLM observability
+- [HoneyHive](https://docs.honeyhive.ai/integrations/ollama) - AI observability and evaluation for agents
+- [MLflow Tracing](https://mlflow.org/docs/latest/llms/tracing/index.html#automatic-tracing) - Open source LLM observability
+
+### Database & Embeddings
+
+- [pgai](https://github.com/timescale/pgai) - PostgreSQL as a vector database ([guide](https://github.com/timescale/pgai/blob/main/docs/vectorizer-quick-start.md))
+- [MindsDB](https://github.com/mindsdb/mindsdb/blob/staging/mindsdb/integrations/handlers/ollama_handler/README.md) - Connect Ollama with 200+ data platforms
+- [chromem-go](https://github.com/philippgille/chromem-go/blob/v0.5.0/embed_ollama.go) - Embeddable vector database for Go ([example](https://github.com/philippgille/chromem-go/tree/v0.5.0/examples/rag-wikipedia-ollama))
+- [Kangaroo](https://github.com/dbkangaroo/kangaroo) - AI-powered SQL client
+
+### Infrastructure & Deployment
+
+#### Cloud
+
+- [Google Cloud](https://cloud.google.com/run/docs/tutorials/gpu-gemma2-with-ollama)
+- [Fly.io](https://fly.io/docs/python/do-more/add-ollama/)
+- [Koyeb](https://www.koyeb.com/deploy/ollama)
+- [Harbor](https://github.com/av/harbor) - Containerized LLM toolkit with Ollama as default backend
+
+#### Package Managers
+
+- [Pacman](https://archlinux.org/packages/extra/x86_64/ollama/)
+- [Homebrew](https://formulae.brew.sh/formula/ollama)
+- [Nix package](https://search.nixos.org/packages?show=ollama&from=0&size=50&sort=relevance&type=packages&query=ollama)
+- [Helm Chart](https://artifacthub.io/packages/helm/ollama-helm/ollama)
+- [Gentoo](https://github.com/gentoo/guru/tree/master/app-misc/ollama)
+- [Flox](https://flox.dev/blog/ollama-part-one)
+- [Guix channel](https://codeberg.org/tusharhero/ollama-guix)
+  </script>
+
+  <script>
+    const sourceEn = document.getElementById("markdown-source").textContent.replace(/^\n/, "").replace(/\s+$/, "");
+    const target = document.getElementById("rendered");
+    const DOWNLOAD_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" aria-hidden="true"><path fill="currentColor" d="M248 24c0-13.3-10.7-24-24-24s-24 10.7-24 24l0 246.1-63-63c-9.4-9.4-24.6-9.4-33.9 0s-9.4 24.6 0 33.9L207 345c9.4 9.4 24.6 9.4 33.9 0L345 241c9.4-9.4 9.4-24.6 0-33.9s-24.6-9.4-33.9 0l-63 63 0-246.1zM66.2 272L64 272c-35.3 0-64 28.7-64 64l0 80c0 35.3 28.7 64 64 64l320 0c35.3 0 64-28.7 64-64l0-80c0-35.3-28.7-64-64-64l-2.2 0-48 48 50.2 0c8.8 0 16 7.2 16 16l0 80c0 8.8-7.2 16-16 16L64 432c-8.8 0-16-7.2-16-16l0-80c0-8.8 7.2-16 16-16l50.2 0-48-48zM368 376a24 24 0 1 0 -48 0 24 24 0 1 0 48 0z"/></svg>';
+    const COPY_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M0 256C0 167.6 71.6 96 160 96h72c13.3 0 24 10.7 24 24s-10.7 24-24 24H160C98.1 144 48 194.1 48 256s50.1 112 112 112h72c13.3 0 24 10.7 24 24s-10.7 24-24 24H160C71.6 416 0 344.4 0 256zm576 0c0 88.4-71.6 160-160 160H344c-13.3 0-24-10.7-24-24s10.7-24 24-24h72c61.9 0 112-50.1 112-112s-50.1-112-112-112H344c-13.3 0-24-10.7-24-24s10.7-24 24-24h72c88.4 0 160 71.6 160 160zM184 232H392c13.3 0 24 10.7 24 24s-10.7 24-24 24H184c-13.3 0-24-10.7-24-24s10.7-24 24-24z"></path></svg>';
+    const storage = {
+      get(key) {
+        try {
+          return window.localStorage.getItem(key);
+        } catch (error) {
+          return null;
+        }
+      },
+      set(key, value) {
+        try {
+          window.localStorage.setItem(key, value);
+        } catch (error) {
+          return null;
+        }
+      }
+    };
+    const STORAGE_KEYS = {
+      chineseSource: "readme-viewer-zh-source-v6"
+    };
+    const EXACT_LINE_MAP_ZH = {
+      "# Ollama": "# Ollama",
+      "Start building with open models.": [
+        `<div class="developer-credit"><span>唯一开发者</span><span class="secret-trigger" data-secret-key="pang"><span class="secret-label">庞兔</span><span class="secret-popover" hidden>其实网站的唯一开发者也是庞兔</span></span></div>`,
+        "",
+        "- 无需特殊网络环境，直连顶级 AI",
+        "- 采用字节跳动线路传输，不存储任何个人隐私，秒级响应",
+        "- 搭载顶级模型，在信息量过载的时代它可以把大海变成水滴",
+        "- API 均由本人通过正规渠道注册获取，个人项目，严禁商用",
+        "",
+        "AI 回答并非绝对准确，请理性参考。如果每位“股东”愿意赞助 0.3元，庞兔的下顿自助餐就靠大家了！"
+      ].join("\n"),
+      "## Download": "## 下载",
+      "### macOS": "### macOS",
+      "### Windows": "### Windows",
+      "### Linux": "### Linux",
+      "### Docker": "### Docker",
+      "### Libraries": "### 库",
+      "### Community": "### 社区",
+      "## Get started": "## 快速开始",
+      "### Coding": "### 编程",
+      "To launch a specific integration:": "要启动特定集成：",
+      "### AI assistant": "### AI 助手",
+      "### Chat with a model": "### 与模型对话",
+      "## REST API": "## REST API",
+      "### Python": "### Python",
+      "### JavaScript": "### JavaScript",
+      "## Supported backends": "## 支持的后端",
+      "## Documentation": "## 文档",
+      "## Community Integrations": "## 社区集成",
+      "> Want to add your project? Open a pull request.": "> 想把你的项目加进来？欢迎提交 Pull Request。",
+      "### Chat Interfaces": "### 聊天界面",
+      "#### Web": "#### Web",
+      "#### Desktop": "#### 桌面",
+      "#### Mobile": "#### 移动端",
+      "### Code Editors & Development": "### 代码编辑器与开发",
+      "### Libraries & SDKs": "### 库与 SDK",
+      "### Frameworks & Agents": "### 框架与 Agent",
+      "### RAG & Knowledge Bases": "### RAG 与知识库",
+      "### Bots & Messaging": "### Bot 与消息平台",
+      "### Terminal & CLI": "### 终端与 CLI",
+      "### Productivity & Apps": "### 效率工具与应用",
+      "### Observability & Monitoring": "### 可观测性与监控",
+      "### Database & Embeddings": "### 数据库与嵌入",
+      "### Infrastructure & Deployment": "### 基础设施与部署",
+      "#### Cloud": "#### 云平台",
+      "#### Package Managers": "#### 包管理器",
+      "or [download manually](https://ollama.com/download/Ollama.dmg)": "或 [手动下载](https://ollama.com/download/Ollama.dmg)",
+      "or [download manually](https://ollama.com/download/OllamaSetup.exe)": "或 [手动下载](https://ollama.com/download/OllamaSetup.exe)",
+      "[Manual install instructions](https://docs.ollama.com/linux#manual-install)": "[手动安装说明](https://docs.ollama.com/linux#manual-install)",
+      "See the [quickstart guide](https://docs.ollama.com/quickstart) for more details.": "更多细节请参阅 [快速开始指南](https://docs.ollama.com/quickstart)。",
+      "See the [API documentation](https://docs.ollama.com/api) for all endpoints.": "全部端点请参阅 [API 文档](https://docs.ollama.com/api)。"
+    };
+    const GENERIC_LINK_LABELS_ZH = {
+      "download manually": "手动下载",
+      "Manual install instructions": "手动安装说明",
+      "quickstart guide": "快速开始指南",
+      "API documentation": "API 文档",
+      "CLI reference": "CLI 参考",
+      "REST API reference": "REST API 参考",
+      "Importing models": "导入模型",
+      "Modelfile reference": "Modelfile 参考",
+      "Building from source": "从源码构建",
+      "docs": "文档",
+      "example": "示例",
+      "guide": "指南"
+    };
+    const CHINESE_FIXUPS = [
+      ["奥拉马", "Ollama"],
+      ["视窗", "Windows"],
+      ["图书馆", "库"],
+      ["人工智能助手", "AI 助手"],
+      ["与模特聊天", "与模型对话"],
+      ["打开网络用户界面", "Open WebUI"],
+      ["不和谐", "Discord"],
+      ["红迪网", "Reddit"],
+      ["人工智能", "AI"]
+    ];
+    const SECRET_POPUP_ANIMATION_MS = 500;
+    const themeQuery = typeof window.matchMedia === "function"
+      ? window.matchMedia("(prefers-color-scheme: dark)")
+      : null;
+    let chineseSourcePromise = null;
+    let activeSecretTrigger = null;
+    let secretPopupEventsBound = false;
+    let profileThemeEventsBound = false;
+
+    function escapeHtml(text) {
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function slugify(text) {
+      return text
+        .toLowerCase()
+        .trim()
+        .replace(/[`~!@#$%^&*()+=|{}[\]:;"'<>?,./\\]/g, "")
+        .replace(/\s+/g, "-");
+    }
+
+    function findMatching(text, startIndex, openChar, closeChar) {
+      let depth = 0;
+
+      for (let index = startIndex; index < text.length; index += 1) {
+        const char = text[index];
+
+        if (char === openChar) {
+          depth += 1;
+        } else if (char === closeChar) {
+          depth -= 1;
+
+          if (depth === 0) {
+            return index;
+          }
+        }
+      }
+
+      return -1;
+    }
+
+    function remapGenericLinkLabel(token) {
+      const match = token.match(/^(!?)\[([^\]]*)\]\(([^)]+)\)$/);
+
+      if (!match) {
+        return token;
+      }
+
+      const bang = match[1];
+      const label = match[2];
+      const url = match[3];
+      const nextLabel = GENERIC_LINK_LABELS_ZH[label] || label;
+      return `${bang}[${nextLabel}](${url})`;
+    }
+
+    function protectMarkdownSyntax(line) {
+      const tokens = [];
+      let tokenIndex = 0;
+      const text = line.replace(/(!?\[[^\]]*\]\([^)]+\)|`[^`]+`)/g, (token) => {
+        const placeholder = `[[[TOKEN_${tokenIndex}]]]`;
+        const replacement = token.startsWith("[") || token.startsWith("![")
+          ? remapGenericLinkLabel(token)
+          : token;
+        tokens.push([placeholder, replacement]);
+        tokenIndex += 1;
+        return placeholder;
+      });
+
+      return { text, tokens };
+    }
+
+    function restoreMarkdownSyntax(line, tokens) {
+      let restored = line;
+
+      tokens.forEach(([placeholder, replacement]) => {
+        restored = restored.replaceAll(placeholder, replacement);
+      });
+
+      return restored;
+    }
+
+    function applyChineseFixups(text) {
+      let nextText = text;
+
+      CHINESE_FIXUPS.forEach(([from, to]) => {
+        nextText = nextText.replaceAll(from, to);
+      });
+
+      return nextText;
+    }
+
+    async function requestTranslation(text) {
+      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=zh-CN&dt=t&q=${encodeURIComponent(text)}`;
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error(`Translation request failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data[0].map((part) => part[0]).join("");
+    }
+
+    async function translateProtectedLines(lines) {
+      const output = [];
+      const joiner = "\n[[[CODEX_SPLIT]]]\n";
+      const batchSize = 24;
+
+      for (let index = 0; index < lines.length; index += batchSize) {
+        const batch = lines.slice(index, index + batchSize);
+
+        try {
+          const translatedBlock = await requestTranslation(batch.join(joiner));
+          const pieces = translatedBlock
+            .split("[[[CODEX_SPLIT]]]")
+            .map((item) => item.replace(/^\n+|\n+$/g, ""));
+
+          if (pieces.length !== batch.length) {
+            throw new Error("Translated batch could not be split safely");
+          }
+
+          output.push(...pieces);
+        } catch (error) {
+          for (const line of batch) {
+            output.push((await requestTranslation(line)).trim());
+          }
+        }
+      }
+
+      return output;
+    }
+
+    async function translateMarkdownToChinese(markdown) {
+      const lines = markdown.split(/\r?\n/);
+      const translatedLines = new Array(lines.length);
+      const pending = [];
+      let inCodeBlock = false;
+
+      lines.forEach((line, index) => {
+        if (/^```/.test(line)) {
+          translatedLines[index] = line;
+          inCodeBlock = !inCodeBlock;
+          return;
+        }
+
+        if (inCodeBlock || !line.trim() || isRawHtmlStart(line)) {
+          translatedLines[index] = line;
+          return;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(EXACT_LINE_MAP_ZH, line)) {
+          translatedLines[index] = EXACT_LINE_MAP_ZH[line];
+          return;
+        }
+
+        pending.push({
+          index,
+          original: line,
+          protected: protectMarkdownSyntax(line)
+        });
+      });
+
+      const translatedText = await translateProtectedLines(
+        pending.map((item) => item.protected.text)
+      );
+
+      pending.forEach((item, index) => {
+        const restored = restoreMarkdownSyntax(translatedText[index], item.protected.tokens);
+        translatedLines[item.index] = applyChineseFixups(restored);
+      });
+
+      return translatedLines.join("\n");
+    }
+
+    async function getChineseSource() {
+      const cachedSource = storage.get(STORAGE_KEYS.chineseSource);
+
+      if (cachedSource) {
+        return cachedSource;
+      }
+
+      if (!chineseSourcePromise) {
+        chineseSourcePromise = translateMarkdownToChinese(sourceEn)
+          .then((translated) => {
+            storage.set(STORAGE_KEYS.chineseSource, translated);
+            return translated;
+          })
+          .finally(() => {
+            chineseSourcePromise = null;
+          });
+      }
+
+      return chineseSourcePromise;
+    }
+
+    function tryParseLinkOrImage(text, startIndex, isImage) {
+      const labelStart = isImage ? startIndex + 1 : startIndex;
+
+      if (text[labelStart] !== "[") {
+        return null;
+      }
+
+      const labelEnd = findMatching(text, labelStart, "[", "]");
+
+      if (labelEnd === -1 || text[labelEnd + 1] !== "(") {
+        return null;
+      }
+
+      const urlStart = labelEnd + 1;
+      const urlEnd = findMatching(text, urlStart, "(", ")");
+
+      if (urlEnd === -1) {
+        return null;
+      }
+
+      const label = text.slice(labelStart + 1, labelEnd);
+      const url = text.slice(urlStart + 1, urlEnd);
+
+      return {
+        html: isImage
+          ? `<img src="${escapeHtml(url)}" alt="${escapeHtml(label)}" />`
+          : `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${renderInline(label)}</a>`,
+        nextIndex: urlEnd + 1
+      };
+    }
+
+    function renderInline(text) {
+      let output = "";
+      let index = 0;
+
+      while (index < text.length) {
+        const char = text[index];
+
+        if (char === "`") {
+          const endIndex = text.indexOf("`", index + 1);
+
+          if (endIndex !== -1) {
+            output += `<code>${escapeHtml(text.slice(index + 1, endIndex))}</code>`;
+            index = endIndex + 1;
+            continue;
+          }
+        }
+
+        if (char === "!" && text[index + 1] === "[") {
+          const image = tryParseLinkOrImage(text, index, true);
+
+          if (image) {
+            output += image.html;
+            index = image.nextIndex;
+            continue;
+          }
+        }
+
+        if (char === "[") {
+          const link = tryParseLinkOrImage(text, index, false);
+
+          if (link) {
+            output += link.html;
+            index = link.nextIndex;
+            continue;
+          }
+        }
+
+        output += escapeHtml(char);
+        index += 1;
+      }
+
+      return output;
+    }
+
+    function isRawHtmlStart(line) {
+      return /^\s*<\/?[a-zA-Z][^>]*>/.test(line);
+    }
+
+    function isBlockStart(line) {
+      return (
+        /^\s*$/.test(line) ||
+        /^```/.test(line) ||
+        /^#{1,6}\s+/.test(line) ||
+        /^-\s+/.test(line) ||
+        /^>\s?/.test(line) ||
+        isRawHtmlStart(line)
+      );
+    }
+
+    function renderMarkdown(markdown) {
+      const lines = markdown.split(/\r?\n/);
+      const html = [];
+      let index = 0;
+
+      while (index < lines.length) {
+        const line = lines[index];
+
+        if (/^\s*$/.test(line)) {
+          index += 1;
+          continue;
+        }
+
+        if (/^```/.test(line)) {
+          const language = line.slice(3).trim();
+          const block = [];
+          index += 1;
+
+          while (index < lines.length && !/^```/.test(lines[index])) {
+            block.push(lines[index]);
+            index += 1;
+          }
+
+          if (index < lines.length) {
+            index += 1;
+          }
+
+        const className = language ? ` class="language-${escapeHtml(language)}"` : "";
+          html.push(`<div class="code-block"><button class="copy-button" type="button" aria-label="复制代码">${COPY_ICON}</button><pre><code${className}>${escapeHtml(block.join("\n"))}</code></pre></div>`);
+          continue;
+        }
+
+        if (/^#{1,6}\s+/.test(line)) {
+          const level = line.match(/^#+/)[0].length;
+          const text = line.slice(level).trim();
+          const id = slugify(text);
+          html.push(`<h${level} id="${id}">${renderInline(text)}</h${level}>`);
+          index += 1;
+          continue;
+        }
+
+        if (/^-\s+/.test(line)) {
+          const items = [];
+
+          while (index < lines.length && /^-\s+/.test(lines[index])) {
+            items.push(`<li>${renderInline(lines[index].replace(/^-\s+/, ""))}</li>`);
+            index += 1;
+          }
+
+          html.push(`<ul>${items.join("")}</ul>`);
+          continue;
+        }
+
+        if (/^>\s?/.test(line)) {
+          const quote = [];
+
+          while (index < lines.length && /^>\s?/.test(lines[index])) {
+            quote.push(lines[index].replace(/^>\s?/, "").trim());
+            index += 1;
+          }
+
+          html.push(`<blockquote><p>${renderInline(quote.join(" "))}</p></blockquote>`);
+          continue;
+        }
+
+        if (isRawHtmlStart(line)) {
+          const block = [];
+
+          while (index < lines.length) {
+            block.push(lines[index]);
+            index += 1;
+
+            if (index >= lines.length || /^\s*$/.test(lines[index])) {
+              break;
+            }
+          }
+
+          html.push(block.join("\n"));
+          continue;
+        }
+
+        const paragraph = [];
+
+        while (index < lines.length && !isBlockStart(lines[index])) {
+          paragraph.push(lines[index].trim());
+          index += 1;
+        }
+
+        html.push(`<p>${renderInline(paragraph.join(" "))}</p>`);
+      }
+
+      return html.join("\n");
+    }
+
+    function buildLocalChineseFallback(markdown) {
+      return markdown
+        .split(/\r?\n/)
+        .map((line) => EXACT_LINE_MAP_ZH[line] || line)
+        .join("\n");
+    }
+
+    function upgradeDownloadLinks() {
+      const links = target.querySelectorAll("a");
+
+      links.forEach((link) => {
+        const label = link.textContent.trim().toLowerCase();
+
+        if (label !== "手动下载" && label !== "download manually") {
+          return;
+        }
+
+        link.classList.add("download-button");
+        link.removeAttribute("target");
+        link.removeAttribute("rel");
+        link.removeAttribute("title");
+        link.setAttribute("aria-label", "前往下载");
+        link.innerHTML = DOWNLOAD_ICON;
+
+        const parent = link.parentElement;
+
+        if (!parent || parent.tagName !== "P") {
+          return;
+        }
+
+        parent.classList.add("download-row");
+        Array.from(parent.childNodes).forEach((node) => {
+          if (node !== link) {
+            node.remove();
+          }
+        });
+      });
+    }
+
+    async function copyText(text) {
+      const clipboard = (window.navigator && window.navigator.clipboard)
+        || (typeof navigator !== "undefined" ? navigator.clipboard : null);
+
+      if (clipboard && clipboard.writeText) {
+        await clipboard.writeText(text);
+        return;
+      }
+
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "absolute";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+      if (typeof document.execCommand === "function") {
+        document.execCommand("copy");
+      }
+      textarea.remove();
+    }
+
+    function enhanceCodeBlocks() {
+      const buttons = target.querySelectorAll(".copy-button");
+
+      buttons.forEach((button) => {
+        const block = button.closest(".code-block");
+        const code = block ? block.querySelector("code") : null;
+
+        if (!code) {
+          return;
+        }
+
+        button.removeAttribute("title");
+
+        button.addEventListener("click", async () => {
+          try {
+            await copyText(code.textContent || "");
+            button.classList.add("is-copied");
+            window.setTimeout(() => {
+              button.classList.remove("is-copied");
+            }, 1200);
+          } catch (error) {
+            console.error(error);
+          }
+        });
+      });
+    }
+
+    function closeProfileLinks(scope = document) {
+      scope.querySelectorAll(".secret-popover-gallery.is-link-open").forEach((gallery) => {
+        gallery.classList.remove("is-link-open");
+        gallery.style.setProperty("--link-origin-shift", "0px");
+        gallery.style.setProperty("--link-shell-left", "50%");
+      });
+
+      scope.querySelectorAll(".profile-card.is-link-open").forEach((card) => {
+        card.classList.remove("is-link-open");
+      });
+    }
+
+    function positionProfileLink(gallery, card, linkShell) {
+      if (!gallery || !card || !linkShell) {
+        return;
+      }
+
+      const page = document.querySelector(".page");
+      const pageRect = page ? page.getBoundingClientRect() : document.documentElement.getBoundingClientRect();
+      const galleryRect = gallery.getBoundingClientRect();
+      const cardRect = card.getBoundingClientRect();
+      const margin = 14;
+      const availableWidth = Math.max(132, pageRect.width - margin * 2);
+
+      linkShell.style.maxWidth = `${availableWidth}px`;
+
+      const linkWidth = Math.min(linkShell.scrollWidth, availableWidth);
+      const avatarCenter = (cardRect.left + cardRect.width / 2) - galleryRect.left;
+      const minCenter = pageRect.left + margin + linkWidth / 2 - galleryRect.left;
+      const maxCenter = pageRect.right - margin - linkWidth / 2 - galleryRect.left;
+      const clampedCenter = Math.min(Math.max(avatarCenter, minCenter), maxCenter);
+      const originShift = avatarCenter - clampedCenter;
+
+      gallery.style.setProperty("--link-shell-left", `${clampedCenter}px`);
+      gallery.style.setProperty("--link-origin-shift", `${originShift}px`);
+    }
+
+    function getProfileAssetSource(image) {
+      if (!image) {
+        return "";
+      }
+
+      const darkSource = image.dataset.darkSrc || "";
+      const lightSource = image.dataset.lightSrc || "";
+
+      if (themeQuery && themeQuery.matches && darkSource) {
+        return darkSource;
+      }
+
+      return lightSource || darkSource;
+    }
+
+    function loadProfileCardImage(card) {
+      const image = card.querySelector(".profile-avatar__image");
+
+      if (!image) {
+        return;
+      }
+
+      const nextSource = getProfileAssetSource(image);
+
+      if (!nextSource) {
+        card.classList.remove("is-loaded", "is-link-open");
+        return;
+      }
+
+      if (image.dataset.currentSrc === nextSource && card.classList.contains("is-loaded")) {
+        return;
+      }
+
+      const requestId = `${Date.now()}-${Math.random()}`;
+      const loader = new Image();
+
+      card.dataset.loadRequestId = requestId;
+
+      loader.decoding = "async";
+      loader.onload = () => {
+        if (card.dataset.loadRequestId !== requestId) {
+          return;
+        }
+
+        image.src = nextSource;
+        image.dataset.currentSrc = nextSource;
+        card.classList.add("is-loaded");
+      };
+      loader.onerror = () => {
+        if (card.dataset.loadRequestId !== requestId) {
+          return;
+        }
+
+        if (!image.dataset.currentSrc) {
+          image.removeAttribute("src");
+          card.classList.remove("is-loaded", "is-link-open");
+        }
+      };
+      loader.src = nextSource;
+    }
+
+    function refreshProfileCardAssets() {
+      document.querySelectorAll(".profile-card").forEach((card) => {
+        loadProfileCardImage(card);
+      });
+    }
+
+    function enhanceProfileCards() {
+      document.querySelectorAll(".profile-card").forEach((card) => {
+        if (card.dataset.profileBound === "true") {
+          return;
+        }
+
+        const avatar = card.querySelector(".profile-avatar");
+        const image = card.querySelector(".profile-avatar__image");
+        const gallery = card.closest(".secret-popover-gallery");
+
+        card.dataset.profileBound = "true";
+
+        if (image) {
+          image.loading = "eager";
+          image.decoding = "async";
+          image.removeAttribute("title");
+        }
+
+        if (!avatar) {
+          return;
+        }
+
+        avatar.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+
+          if (!gallery) {
+            return;
+          }
+
+          const linkShell = gallery.querySelector(".profile-link-shell");
+          const nextUrl = card.dataset.profileUrl || "";
+          const isSame = gallery.classList.contains("is-link-open")
+            && card.classList.contains("is-link-open")
+            && linkShell
+            && linkShell.getAttribute("href") === nextUrl;
+
+          closeProfileLinks(gallery);
+
+          if (isSame || !linkShell || !nextUrl) {
+            return;
+          }
+
+          linkShell.href = nextUrl;
+          linkShell.textContent = nextUrl;
+          linkShell.setAttribute("aria-label", nextUrl);
+          positionProfileLink(gallery, card, linkShell);
+
+          window.requestAnimationFrame(() => {
+            card.classList.add("is-link-open");
+            gallery.classList.add("is-link-open");
+          });
+        });
+      });
+
+      refreshProfileCardAssets();
+
+      if (profileThemeEventsBound || !themeQuery) {
+        return;
+      }
+
+      const handleThemeChange = () => {
+        refreshProfileCardAssets();
+      };
+
+      if (typeof themeQuery.addEventListener === "function") {
+        themeQuery.addEventListener("change", handleThemeChange);
+      } else if (typeof themeQuery.addListener === "function") {
+        themeQuery.addListener(handleThemeChange);
+      }
+
+      profileThemeEventsBound = true;
+    }
+
+    function createWaterDrops(trigger, popover) {
+      const triggerRect = trigger.getBoundingClientRect();
+      const popoverRect = popover.getBoundingClientRect();
+      
+      // 弹窗中心
+      const popoverCenterX = popoverRect.left + popoverRect.width / 2;
+      const popoverCenterY = popoverRect.top + popoverRect.height / 2;
+      
+      // trigger中心
+      const triggerCenterX = triggerRect.left + triggerRect.width / 2;
+      const triggerCenterY = triggerRect.top + triggerRect.height / 2;
+      
+      // 创建15个水滴，更密集
+      for (let i = 0; i < 15; i++) {
+        const drop = document.createElement('div');
+        drop.className = 'water-drop';
+        
+        // 随机方向和大小，更密集的分布
+        const angle = (Math.PI * 2 * i) / 15 + (Math.random() - 0.5) * 0.3;
+        const distance = 20 + Math.random() * 40;
+        const dropX = Math.cos(angle) * distance;
+        const dropY = Math.sin(angle) * distance;
+        
+        // 水滴大小 - 有大有小
+        const dropSize = 4 + Math.random() * 8;
+        
+        // 设置起始位置为弹窗中心
+        drop.style.left = popoverCenterX + 'px';
+        drop.style.top = popoverCenterY + 'px';
+        drop.style.width = dropSize + 'px';
+        drop.style.height = dropSize + 'px';
+        
+        // 计算移向trigger的偏移，产生聚集的效果
+        const targetX = triggerCenterX - popoverCenterX - (dropSize / 2) + (Math.random() - 0.5) * 10;
+        const targetY = triggerCenterY - popoverCenterY - (dropSize / 2) + (Math.random() - 0.5) * 10;
+        
+        drop.style.setProperty('--drop-x', (targetX + dropX) + 'px');
+        drop.style.setProperty('--drop-y', (targetY + dropY) + 'px');
+        
+        document.body.appendChild(drop);
+        
+        // 动画完成后删除
+        drop.addEventListener('animationend', () => {
+          drop.remove();
+        });
+      }
+    }
+
+    function closeSecretPopup(trigger = activeSecretTrigger) {
+      if (!trigger) {
+        return;
+      }
+
+      const popover = trigger.querySelector(".secret-popover");
+
+      if (!popover) {
+        return;
+      }
+
+      if (trigger._secretHideTimer) {
+        window.clearTimeout(trigger._secretHideTimer);
+        trigger._secretHideTimer = null;
+      }
+
+      closeProfileLinks(trigger);
+      
+      
+      trigger.classList.remove("is-open");
+
+      trigger._secretHideTimer = window.setTimeout(() => {
+        if (!trigger.classList.contains("is-open")) {
+          if (popover) popover.hidden = true;
+          trigger.classList.remove("is-closing");
+        }
+        trigger._secretHideTimer = null;
+      }, 500);
+
+      if (activeSecretTrigger === trigger) {
+        activeSecretTrigger = null;
+      }
+    }
+
+    function openSecretPopup(trigger) {
+      if (!trigger) {
+        return;
+      }
+
+      if (trigger._secretHideTimer) {
+        window.clearTimeout(trigger._secretHideTimer);
+        trigger._secretHideTimer = null;
+      }
+
+      if (activeSecretTrigger && activeSecretTrigger !== trigger) {
+        closeSecretPopup(activeSecretTrigger);
+      }
+
+      const popover = trigger.querySelector(".secret-popover");
+
+      if (!popover) {
+        return;
+      }
+
+      // show popover
+      popover.hidden = false;
+      window.requestAnimationFrame(() => {
+        trigger.classList.add("is-open");
+      });
+      activeSecretTrigger = trigger;
+    }
+
+    function enhanceSecretPopups() {
+      document.querySelectorAll(".secret-trigger").forEach((trigger) => {
+        if (trigger.dataset.secretBound === "true") {
+          return;
+        }
+
+        trigger.dataset.secretBound = "true";
+        trigger.removeAttribute("title");
+
+        trigger.addEventListener("click", (event) => {
+          if (event.target.closest(".secret-popover")) {
+            event.stopPropagation();
+            return;
+          }
+
+          event.preventDefault();
+
+          if (trigger.classList.contains("is-open")) {
+            closeSecretPopup(trigger);
+          } else {
+            openSecretPopup(trigger);
+          }
+
+          event.stopPropagation();
+        });
+      });
+
+      if (secretPopupEventsBound) {
+        return;
+      }
+
+      document.addEventListener("click", (event) => {
+        if (!activeSecretTrigger) {
+          return;
+        }
+
+        if (event.target.closest(".secret-trigger")) {
+          return;
+        }
+
+        closeSecretPopup(activeSecretTrigger);
+      });
+
+      window.addEventListener("resize", () => {
+        if (activeSecretTrigger) {
+          const pop = activeSecretTrigger._portalPopover || activeSecretTrigger.querySelector(".secret-popover");
+          const gallery = pop ? pop.querySelector(".secret-popover-gallery.is-link-open") : null;
+          const card = gallery ? gallery.querySelector(".profile-card.is-link-open") : null;
+          const linkShell = gallery ? gallery.querySelector(".profile-link-shell") : null;
+
+          if (gallery && card && linkShell) {
+            positionProfileLink(gallery, card, linkShell);
+          }
+        }
+      });
+
+      // 滚动时自动关闭所有弹窗
+      window.addEventListener("scroll", () => {
+        if (activeSecretTrigger) {
+          closeSecretPopup(activeSecretTrigger);
+        }
+      }, { passive: true });
+
+      secretPopupEventsBound = true;
+    }
+
+    function removeLinkTitles() {
+      target.querySelectorAll("a[title], button[title]").forEach((element) => {
+        element.removeAttribute("title");
+      });
+    }
+
+
+    /* ══ 全站动画 JS ══════════════════════════════════════════ */
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+    window.addEventListener('load', () => requestAnimationFrame(() => window.scrollTo(0,0)));
+    window.addEventListener('pageshow', () => window.scrollTo(0,0));
+
+    function enhanceScrollReveal() {
+      const rendered = document.getElementById('rendered');
+      if (!rendered) return;
+      let lastScrollY = window.scrollY, scrollDir = 'down';
+      window.addEventListener('scroll', () => {
+        scrollDir = window.scrollY > lastScrollY ? 'down' : 'up';
+        lastScrollY = window.scrollY;
+      }, { passive: true });
+
+      const targets = rendered.querySelectorAll('h2,h3,h4,p,li,blockquote,.code-block');
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          const el = entry.target;
+          if (entry.isIntersecting) {
+            el.classList.remove('dir-down','dir-up','visible');
+            void el.offsetWidth;
+            el.classList.add(scrollDir === 'up' ? 'dir-up' : 'dir-down');
+            el.style.animationDelay = (el.dataset.rd || 0) + 'ms';
+            requestAnimationFrame(() => el.classList.add('visible'));
+          } else {
+            el.classList.remove('dir-down','dir-up','visible');
+          }
+        });
+      }, { threshold: 0.06, rootMargin: '0px 0px -30px 0px' });
+
+      let batchI = 0, lastTop = -9999;
+      targets.forEach(el => {
+        el.classList.add('reveal');
+        const top = Math.round(el.getBoundingClientRect().top);
+        batchI = Math.abs(top - lastTop) < 14 ? batchI + 1 : 0;
+        lastTop = top;
+        el.dataset.rd = batchI * 50;
+        io.observe(el);
+      });
+    }
+
+    function enhancePageLeave() {
+      // 所有外部链接已设为 target=_blank，无需拦截跳转
+    }
+
+    async function renderChinesePage() {
+      try {
+        const source = await getChineseSource();
+        target.innerHTML = renderMarkdown(source);
+        upgradeDownloadLinks(); enhanceCodeBlocks();
+        enhanceSecretPopups(); enhanceProfileCards(); removeLinkTitles();
+        // 所有链接新窗口打开
+        target.querySelectorAll('a[href]').forEach(a => {
+          const href = a.getAttribute('href');
+          if (href && !href.startsWith('#')) {
+            a.setAttribute('target', '_blank');
+            a.setAttribute('rel', 'noopener noreferrer');
+          }
+        });
+        enhanceScrollReveal(); enhancePageLeave();
+        document.body.classList.add('site-ready');
+      } catch (err) {
+        console.error(err);
+        target.innerHTML = renderMarkdown(buildLocalChineseFallback(sourceEn));
+        upgradeDownloadLinks(); enhanceCodeBlocks();
+        enhanceSecretPopups(); enhanceProfileCards(); removeLinkTitles();
+        enhanceScrollReveal();
+        document.body.classList.add('site-ready');
+      }
+    }
+    renderChinesePage();
+  </script>
+  <script src="./link-sweep.js"></script>
+  <script src="./corner-easter.js"></script>
+</body>
+</html>
